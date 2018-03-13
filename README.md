@@ -1,6 +1,6 @@
 # CertifiedMail
 
-# 1- Descomprimir carpeta node_modules.zip
+# 1 - Descomprimir carpeta node_modules.zip
 
 # 2 - Descarregar metamask
 
