@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+
+    <link rel="stylesheet" type="text/css" href="main.css">
+
+
+    <script src="./node_modules/web3/dist/web3.min.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>Contract</h1>
+        <span id="countIns"></span>
+
+        <h2 id="state"></h2>
+        <span id="insTrans"></span>
+        <hr>
+
+        <label for="hB" class="col-lg-2 control-label">NRR: </label>
+        <input id="hB" type="text">
+
+        <label for="key" class="col-lg-2 control-label">KEY: </label>
+        <input id="key" type="text">
+
+        <button id="buttonAbort">Abort</button>
+        <span id="abortText"></span>
+        <button id="buttonResolve">Resolve</button>
+        <span id="resolveText"></span>
+        <button id="buttonState">Get State</button>
+        <span id="stateText"></span>
+
+
+        <img id="loader" src="https://loading.io/spinners/double-ring/lg.double-ring-spinner.gif">
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+
+    <script>
+
+        var Web3 = require('web3');
+        if (typeof web3 !== 'undefined') {
+            web3 = new Web3(web3.currentProvider);
+        } else {
+            web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+        }
+
+
+        //Importante utilizar el método getAccounts, ya que es asíncrono. Si no se usa, web3.eth.defaultAccount puede ser "undefined".
+        web3.eth.getAccounts(function(error,accounts){
+        	//console.log(accounts[0]);
+        	web3.eth.defaultAccount=accounts[0];
+        	console.log("Account address: " + web3.eth.defaultAccount);
+        });
+        //web3.eth.defaultAccount = web3.eth.accounts[0];
+        //console.log(web3.eth.defaultAccount);
+        var emailContract = web3.eth.contract([
+	{
+	    "constant": true,
+	    "inputs": [],
+	    "name": "getState",
+	    "outputs": [
+			{
+			    "name": "",
+			    "type": "string"
+			}
+	    ],
+	    "payable": false,
+	    "stateMutability": "view",
+	    "type": "function"
+	},
+	{
+	    "constant": false,
+	    "inputs": [],
+	    "name": "abort",
+	    "outputs": [],
+	    "payable": false,
+	    "stateMutability": "nonpayable",
+	    "type": "function"
+	},
+	{
+	    "constant": false,
+	    "inputs": [
+			{
+			    "name": "_hB",
+			    "type": "string"
+			},
+			{
+			    "name": "_keyB",
+			    "type": "string"
+			}
+	    ],
+	    "name": "Resolve",
+	    "outputs": [],
+	    "payable": false,
+	    "stateMutability": "nonpayable",
+	    "type": "function"
+	},
+	{
+	    "constant": true,
+	    "inputs": [],
+	    "name": "state",
+	    "outputs": [
+			{
+			    "name": "",
+			    "type": "uint8"
+			}
+	    ],
+	    "payable": false,
+	    "stateMutability": "view",
+	    "type": "function"
+	},
+	{
+	    "inputs": [
+			{
+			    "name": "_sender",
+			    "type": "address"
+			},
+			{
+			    "name": "_receiver",
+			    "type": "address"
+			}
+	    ],
+	    "payable": false,
+	    "stateMutability": "nonpayable",
+	    "type": "constructor"
+	},
+	{
+	    "anonymous": false,
+	    "inputs": [
+			{
+			    "indexed": false,
+			    "name": "abortResponse",
+			    "type": "string"
+			}
+	    ],
+	    "name": "abortEvent",
+	    "type": "event"
+	},
+	{
+	    "anonymous": false,
+	    "inputs": [
+			{
+			    "indexed": false,
+			    "name": "resolveResponse",
+			    "type": "string"
+			}
+	    ],
+	    "name": "resolveEvent",
+	    "type": "event"
+	}
+        ]);
+
+        var email = emailContract.at('0x4aaf200f598c2d5352c5a35d03d90fd20efd2167');
+        console.log(email);
+
+
+
+        var abortEvent = email.abortEvent({}, 'latest');
+
+        abortEvent.watch(function (error, result) {
+            if (result) {
+                if (result.blockHash != $("#insTrans").html())
+                    $("#loader").hide();
+
+                $("#insTrans").html('Block hash: ' + result.blockHash);
+                $("#abortText").html('Response: ' + result.args.abortResponse);
+            } else {
+                $("#loader").hide();
+            }
+        });
+
+        var resolveEvent = email.resolveEvent({}, 'latest');
+
+        resolveEvent.watch(function (error, result) {
+            if (result) {
+                if (result.blockHash != $("#insTrans").html())
+                    $("#loader").hide();
+
+                $("#insTrans").html('Block hash: ' + result.blockHash);
+                $("#resolveText").html('Response: ' + result.args.resolveResponse);
+            } else {
+                $("#loader").hide();
+            }
+        });
+
+        $("#loader").hide();
+
+        $("#buttonAbort").click(function () {
+            $("#loader").show();
+            email.abort((err, res) => {
+                if (err) { 
+                    $("#loader").show();
+                }
+            });
+        });
+
+        $("#buttonResolve").click(function () {
+            $("#loader").show();
+            email.Resolve($("#hB").val(),$("#key").val(),(err, res) => {
+                if (err) {
+                    $("#loader").show();
+                }
+            });
+        });
+
+        $("#buttonState").click(function () {
+            email.getState.call((err, res) => {
+                if (!err) {
+                    $("#stateText").html('State: '+ res);
+                }
+            });
+        });
+
+
+    </script>
+        
+</body>
+</html>
